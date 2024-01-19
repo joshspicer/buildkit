@@ -133,6 +133,7 @@ func (gf *gatewayFrontend) Solve(ctx context.Context, llbBridge frontend.Fronten
 		if err != nil {
 			return nil, err
 		}
+
 		defer rootFS.Release(context.TODO())
 		config, ok := devRes.Metadata[exptypes.ExporterImageConfigKey]
 		if ok {
@@ -223,6 +224,7 @@ func (gf *gatewayFrontend) Solve(ctx context.Context, llbBridge frontend.Fronten
 		if err != nil {
 			return nil, err
 		}
+
 		defer rootFS.Release(context.TODO())
 	}
 
@@ -293,7 +295,8 @@ func (gf *gatewayFrontend) Solve(ctx context.Context, llbBridge frontend.Fronten
 		return nil, err
 	}
 
-	mdmnt, release, err := metadataMount(frontendDef)
+	bklog.G(ctx).Infof("!!! rootFS.IdentityMapping(): %v\n", rootFS.IdentityMapping())
+	mdmnt, release, err := metadataMount(frontendDef, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -324,7 +327,7 @@ func (gf *gatewayFrontend) Solve(ctx context.Context, llbBridge frontend.Fronten
 	return lbf.Result()
 }
 
-func metadataMount(def *opspb.Definition) (*executor.Mount, func(), error) {
+func metadataMount(def *opspb.Definition, ctx context.Context) (*executor.Mount, func(), error) {
 	dt, err := def.Marshal()
 	if err != nil {
 		return nil, nil, err
@@ -337,6 +340,8 @@ func metadataMount(def *opspb.Definition) (*executor.Mount, func(), error) {
 	if err := os.WriteFile(filepath.Join(dir, "frontend.bin"), dt, 0400); err != nil {
 		return nil, nil, err
 	}
+
+	bklog.G(ctx).Infof(" !!!! metadata mount: %s", dir)
 
 	return &executor.Mount{
 			Src:      &bind{dir},
